@@ -74,3 +74,74 @@ export default defineConfig([
 
 ```
 "# text-me" 
+
+## Design tokens (dark / OLED theme)
+
+The colour palette lives in two mirrored places:
+
+| File | What it gives you |
+|---|---|
+| `src/index.css` → `@theme static { … }` | Tailwind utilities **and** `var(--color-*)` custom properties |
+| `src/styles/colors.ts` | Typed constants for SVG props, canvas, chart configs, inline styles |
+
+Use the semantic name — the one that says what the colour is *for* — rather than the raw hex.
+
+### Backgrounds & surfaces
+
+| Token | Hex | Tailwind class |
+|---|---|---|
+| `screen` | `#000000` | `bg-screen` |
+| `searchBar` | `#1C1C1E` | `bg-search-bar` |
+| `pill` | `#2C2C2E` | `bg-pill` |
+| `nav` | `#1C1C1E` @ 85% | `bg-nav` |
+
+### Text
+
+| Token | Hex | Tailwind class |
+|---|---|---|
+| `fg` | `#FFFFFF` | `text-fg` |
+| `fgMuted` | `#8E8E93` | `text-fg-muted` |
+| `fgFaint` | `#A2A2A7` | `text-fg-faint` |
+
+### Accents, badges & indicators
+
+| Token | Hex | Tailwind class |
+|---|---|---|
+| `accent` | `#3478F6` | `bg-accent` / `text-accent` |
+| `accentBright` | `#007AFF` | `bg-accent-bright` |
+| `statusActive` | `#34C759` | `bg-status-active` |
+| `badgeAlert` | `#FF3B30` | `bg-badge-alert` |
+| `badgeMuted` | `#2C2C2E` | `bg-badge-muted` |
+
+### Icons & dividers
+
+| Token | Hex | Tailwind class |
+|---|---|---|
+| `iconActive` | `#3478F6` | `text-icon-active` |
+| `iconInactive` | `#8E8E93` | `text-icon-inactive` |
+| `iconMute` | `#8E8E93` | `text-icon-mute` |
+| `divider` | `#2C2C2E` | `border-divider` |
+
+Raw primitives (`grey-900`, `grey-800`, `grey-500`, `grey-400`, `blue`, `blue-bright`, `green`, `red`, plus Tailwind's own `black` / `white`) are also available for one-offs.
+
+### Usage
+
+```tsx
+// 1. Tailwind utilities (preferred)
+<div className="bg-screen text-fg-muted border-b border-divider" />
+
+// 2. CSS custom properties — inline styles and SVG attributes
+<div style={{ backgroundColor: 'var(--color-search-bar)' }} />
+<circle fill="var(--color-accent)" />
+
+// 3. Typed constants — where a literal string is required
+import { colors, withAlpha } from './styles/colors'
+
+<circle fill={colors.accent} />
+<div style={{ backgroundColor: withAlpha(colors.searchBar, 0.85) }} />
+```
+
+Opacity modifiers work on any token: `bg-nav/50`, `text-fg/60`.
+
+Keep `src/index.css` and `src/styles/colors.ts` in sync — they hold the same values.
+
