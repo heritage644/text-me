@@ -1,1 +1,83 @@
 @import "tailwindcss";
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DESIGN TOKENS — dark (OLED) theme for the Text-ME app
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Tailwind v4 is configured in CSS, so every `--color-*` declared in the
+ * `@theme static` block below automatically becomes a real utility class:
+ *
+ *     --color-screen        →  bg-screen  text-screen  border-screen  …
+ *     --color-fg-muted      →  text-fg-muted
+ *     --color-divider       →  border-divider
+ *
+ * They are also emitted as CSS custom properties on `:root`, so plain CSS,
+ * inline styles and SVG attributes can use them too:
+ *
+ *     style={{ color: 'var(--color-fg)' }}
+ *     <circle fill="var(--color-accent)" />
+ *
+ * For JS/TS values (SVG props, canvas, charts) import the mirrored constants:
+ *
+ *     import { colors } from './styles/colors'
+ *     <circle fill={colors.accent} />
+ *
+ * Two layers:
+ *   • PRIMITIVES  – the raw palette values (grey-900, blue, green, …)
+ *   • SEMANTIC    – what the colour is *for* (screen, pill, divider, …)
+ * Prefer the semantic names in components; reach for a primitive only when a
+ * one-off value is genuinely not covered by the spec.
+ *
+ * NOTE: `@theme static` is deliberate. Without `static`, Tailwind drops any
+ * theme variable that no utility class happens to use, so an as-yet-unused
+ * `var(--color-nav)` would resolve to nothing. `static` keeps every token in
+ * `:root` permanently, at a cost of a few hundred bytes.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+@theme static {
+  /* ══ Primitives — raw palette values ═══════════════════════════════════ */
+  /* `black` (#000000) and `white` (#ffffff) already ship with Tailwind. */
+  --color-grey-900: #1c1c1e; /* iOS dark grey   */
+  --color-grey-800: #2c2c2e; /* iOS medium grey */
+  --color-grey-500: #8e8e93; /* iOS neutral muted grey */
+  --color-grey-400: #a2a2a7; /* iOS light muted grey   */
+  --color-blue: #3478f6; /* iOS system blue (dark appearance) */
+  --color-blue-bright: #007aff; /* iOS system blue (light appearance) */
+  --color-green: #34c759; /* iOS system green */
+  --color-red: #ff3b30; /* iOS system red   */
+
+  /* ══ 1. Backgrounds & surfaces ═════════════════════════════════════════ */
+  --color-screen: var(--color-black); /* Main screen background — true OLED black */
+  --color-search-bar: var(--color-grey-900); /* Search bar background */
+  --color-pill: var(--color-grey-800); /* Pill buttons ("Edit", "All") */
+  --color-nav: rgb(28 28 30 / 85%); /* Floating bottom nav — #1c1c1e @ 85% opacity */
+
+  /* ══ 2. Text ═══════════════════════════════════════════════════════════ */
+  --color-fg: var(--color-white); /* Primary text — names, headers */
+  --color-fg-muted: var(--color-grey-500); /* Secondary text — message previews, dates */
+  --color-fg-faint: var(--color-grey-400); /* Muted badge text */
+
+  /* ══ 3. Accents, badges & indicators ═══════════════════════════════════ */
+  --color-accent: var(--color-blue); /* Active tabs, blue badges, top banner */
+  --color-accent-bright: var(--color-blue-bright); /* Alternate iOS system blue */
+  --color-status-active: var(--color-green); /* Top-left time pill */
+  --color-badge-alert: var(--color-red); /* Notification / settings alert badge */
+  --color-badge-muted: var(--color-grey-800); /* Muted unread badge background */
+
+  /* ══ 4. Icons & dividers ═══════════════════════════════════════════════ */
+  --color-icon-active: var(--color-blue); /* Active navigation icon */
+  --color-icon-inactive: var(--color-grey-500); /* Inactive navigation icons */
+  --color-icon-mute: var(--color-grey-500); /* Mute / pin icons */
+  --color-divider: var(--color-grey-800); /* Separators & borders */
+}
+
+/*
+ * Base document styling. Every screen in the app starts from the OLED black
+ * surface with primary text on top — individual components override as needed.
+ */
+@layer base {
+  body {
+    background-color: var(--color-screen);
+    color: var(--color-fg);
+  }
+}
