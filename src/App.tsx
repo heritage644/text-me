@@ -1,16 +1,21 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import './App.css'
-import Header from './components/header'
+import LoginPage from './auth/login-page'
+import SignUp from './auth/signup'
+
 function App() {
-  const [count, setCount] = useState(0)
+  const navigate = useNavigate()
 
   return (
-    <>
-     <Header />
-    </>
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/signup"
+        element={<SignUp onSwitchToLogin={() => navigate('/login')} />}
+      />
+      <Route path="*" element={<p className="p-8 text-fg">This page no dey o. Go back.</p>} />
+    </Routes>
   )
 }
 
