@@ -75,7 +75,7 @@ function Logo({ className = "" }) {
   );
 }
  
-export default function Login({ onSubmit }:any) {
+export default function Login() {
 const navigate = useNavigate();
  type FormErrors = {
   email?: string;

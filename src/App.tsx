@@ -2,7 +2,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import './App.css'
 import LoginPage from './auth/login-page'
 import SignUp from './auth/signup'
-
+import ChatDashboard from './dashboard/chats'
 function App() {
   const navigate = useNavigate()
 
@@ -10,6 +10,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+        <Route path="/chat" element={<ChatDashboard />} />
       <Route
         path="/signup"
         element={<SignUp onSwitchToLogin={() => navigate('/login')} />}

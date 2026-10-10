@@ -49,7 +49,7 @@ function Tip({
 }
 
 /* ---------- Page ---------- */
-export default function SignUp({ onSubmit, onSwitchToLogin }: SignUpProps) {
+export default function SignUp({  onSwitchToLogin }: SignUpProps) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
