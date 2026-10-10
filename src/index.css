@@ -81,3 +81,56 @@
     color: var(--color-fg);
   }
 }
+
+/* Non-colour theme values: the typing-dots animation used in threads. */
+@theme {
+  --animate-typing-dot: typing-dot 1.2s infinite ease-in-out;
+
+  @keyframes typing-dot {
+    0%,
+    80%,
+    100% {
+      opacity: 0.3;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+}
+
+/* Safe-area helpers for notched phones (needs `viewport-fit=cover`). */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* Visual-viewport height, kept in sync by `useAppHeight` so the composer stays above the mobile keyboard. */
+@utility h-app {
+  height: var(--app-height, 100dvh);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}

@@ -1,21 +1,17 @@
 import { useState, type ReactNode, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { errorTextClass, formAlertClass } from "../../components/ui/styles";
+import { toFormErrors } from "../../lib/form-errors";
+import { useRegister } from "./hooks";
+
 type SignUpErrors = {
+  name?: string;
   username?: string;
   email?: string;
   password?: string;
   confirm?: string;
   terms?: string;
   form?: string;
-};
-
-type SignUpProps = {
-  onSubmit?: (data: {
-    username: string;
-    email: string;
-    password: string;
-  }) => Promise<void> | void;
-  onSwitchToLogin?: () => void;
 };
 
 /* ---------- Tooltip ---------- */
@@ -40,7 +36,7 @@ function Tip({
       {children}
       <span
         role="tooltip"
-        className={`pointer-events-none absolute bottom-full mb-2 ${pos} z-20 w-max max-w-[16rem] rounded-md bg-white px-3 py-1.5 text-xs text-black opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100`}
+        className={`pointer-events-none absolute bottom-full mb-2 ${pos} z-20 w-max max-w-[16rem] rounded-md bg-fg px-3 py-1.5 text-xs text-screen opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100`}
       >
         {text}
       </span>
@@ -49,7 +45,8 @@ function Tip({
 }
 
 /* ---------- Page ---------- */
-export default function SignUp({  onSwitchToLogin }: SignUpProps) {
+export default function SignUp() {
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,69 +54,32 @@ export default function SignUp({  onSwitchToLogin }: SignUpProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState<SignUpErrors>({});
-  const [loading, setLoading] = useState(false);
-const navigate = useNavigate();
+  const register = useRegister();
+
   const validate = () => {
- 
     const next: SignUpErrors = {};
-    if (username.trim().length < 3)
-      next.username = "Name must reach at least 3 letters.";
+    if (name.trim().length < 2) next.name = "Tell us your name.";
+    if (!/^[a-z0-9_]{3,20}$/i.test(username.trim()))
+      next.username = "Name must reach at least 3 letters (letters, numbers or _).";
     if (!/^\S+@\S+\.\S+$/.test(email))
       next.email = "Enter a valid email address.";
     if (password.length < 6)
       next.password = "Password must be at least 6 characters.";
     if (confirm !== password) next.confirm = "The two passwords no match.";
+    if (!agreed) next.terms = "Abeg tick the box first.";
     return next;
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-       
+  // On success the user is signed in and PublicOnlyRoute redirects into the app.
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const next = validate();
     setErrors(next);
     if (Object.keys(next).length) return;
-
-    try {
-  setLoading(true);
-  const res = await fetch(
-    "https://supreme-xylophone-7q469j44j94hwq5x-3000.app.github.dev/api/auth/register",
-    {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.trim(), email: email.trim(), password }),
-    }
-  );
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    // Zod validation errors: { message, errors: [{ field, message }] }
-    if (Array.isArray(data.errors)) {
-      const fieldErrors: SignUpErrors = {};
-      for (const e of data.errors) {
-        if (e.field === "username") fieldErrors.username = e.message;
-        else if (e.field === "email") fieldErrors.email = e.message;
-        else if (e.field === "password") fieldErrors.password = e.message;
-      }
-      setErrors({
-        ...fieldErrors,
-        form: Object.keys(fieldErrors).length ? undefined : data.message,
-      });
-    } else {
-      setErrors({ form: data.message || "Registration failed. Please try again." });
-    }
-    return;
-  }
-
-  navigate("/login"); // success
-} catch (err) {
-  setErrors({
-    form: err instanceof Error ? err.message : "Something shake o. Try again.",
-  });
-} finally {
-  setLoading(false);
-}
+    register.mutate(
+      { name: name.trim(), username: username.trim(), email: email.trim(), password },
+      { onError: (err) => setErrors(toFormErrors<keyof SignUpErrors>(err)) },
+    );
   };
 
   const inputBase =
@@ -127,15 +87,17 @@ const navigate = useNavigate();
     "border outline-none transition-colors focus:border-accent focus-visible:ring-2 focus-visible:ring-accent";
 
   const fieldBorder = (err?: string) =>
-    err ? "border-red-500" : "border-white/15";
+    err ? "border-badge-alert" : "border-divider";
 
   const label = "text-sm font-semibold text-fg";
-  const errorText = "mt-1.5 text-sm text-red-500";
+
+  const described = (field: keyof SignUpErrors) =>
+    errors[field] ? `${field}-error` : undefined;
 
   return (
-    <main className="grid min-h-screen bg-screen text-fg lg:grid-cols-2">
+    <main className="grid min-h-dvh bg-screen text-fg lg:grid-cols-2">
       {/* Left panel */}
-      <section className="hidden flex-col justify-between border-r border-white/10 p-16 lg:flex">
+      <section className="hidden flex-col justify-between border-r border-divider p-16 lg:flex">
         <Tip text="Na chat app, no be bank. Relax." align="left">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent">
@@ -143,7 +105,7 @@ const navigate = useNavigate();
                 width="22"
                 height="22"
                 viewBox="0 0 24 24"
-                fill="white"
+                className="fill-fg"
                 aria-hidden="true"
               >
                 <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4V6a2 2 0 0 1 2-2z" />
@@ -178,13 +140,31 @@ const navigate = useNavigate();
           </header>
 
           {errors.form && (
-            <p
-              role="alert"
-              className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-400"
-            >
+            <p role="alert" className={formAlertClass}>
               {errors.form}
             </p>
           )}
+
+          {/* Name */}
+          <div>
+            <Tip text="Your real name, so your people fit recognise you." align="left">
+              <label htmlFor="name" className={label}>
+                Your name
+              </label>
+            </Tip>
+            <input
+              id="name"
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Amaka Obi"
+              aria-invalid={!!errors.name}
+              aria-describedby={described("name")}
+              className={`${inputBase} mt-2 ${fieldBorder(errors.name)}`}
+            />
+            {errors.name && <p id="name-error" className={errorTextClass}>{errors.name}</p>}
+          </div>
 
           {/* Username */}
           <div>
@@ -197,13 +177,15 @@ const navigate = useNavigate();
               id="username"
               type="text"
               autoComplete="username"
+              autoCapitalize="none"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="e.g. omo_lagos"
               aria-invalid={!!errors.username}
+              aria-describedby={described("username")}
               className={`${inputBase} mt-2 ${fieldBorder(errors.username)}`}
             />
-            {errors.username && <p className={errorText}>{errors.username}</p>}
+            {errors.username && <p id="username-error" className={errorTextClass}>{errors.username}</p>}
           </div>
 
           {/* Email */}
@@ -217,13 +199,15 @@ const navigate = useNavigate();
               id="email"
               type="email"
               autoComplete="email"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               aria-invalid={!!errors.email}
+              aria-describedby={described("email")}
               className={`${inputBase} mt-2 ${fieldBorder(errors.email)}`}
             />
-            {errors.email && <p className={errorText}>{errors.email}</p>}
+            {errors.email && <p id="email-error" className={errorTextClass}>{errors.email}</p>}
           </div>
 
           {/* Password */}
@@ -242,17 +226,19 @@ const navigate = useNavigate();
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Make am strong small"
                 aria-invalid={!!errors.password}
+                aria-describedby={described("password")}
                 className={`${inputBase} pr-16 ${fieldBorder(errors.password)}`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-fg-muted hover:text-fg"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute inset-y-0 right-0 rounded-r-xl px-4 text-sm text-fg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
-            {errors.password && <p className={errorText}>{errors.password}</p>}
+            {errors.password && <p id="password-error" className={errorTextClass}>{errors.password}</p>}
           </div>
 
           {/* Confirm password */}
@@ -270,9 +256,10 @@ const navigate = useNavigate();
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Same password, abeg"
               aria-invalid={!!errors.confirm}
+              aria-describedby={described("confirm")}
               className={`${inputBase} mt-2 ${fieldBorder(errors.confirm)}`}
             />
-            {errors.confirm && <p className={errorText}>{errors.confirm}</p>}
+            {errors.confirm && <p id="confirm-error" className={errorTextClass}>{errors.confirm}</p>}
           </div>
 
           {/* Terms */}
@@ -283,7 +270,9 @@ const navigate = useNavigate();
                   type="checkbox"
                   checked={agreed}
                   onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-[var(--color-accent,#3b82f6)]"
+                  aria-invalid={!!errors.terms}
+                  aria-describedby={described("terms")}
+                  className="mt-0.5 h-4 w-4 accent-accent"
                 />
                 <span>
                   I don read the{" "}
@@ -294,33 +283,26 @@ const navigate = useNavigate();
                 </span>
               </label>
             </Tip>
-            {errors.terms && <p className={errorText}>{errors.terms}</p>}
+            {errors.terms && <p id="terms-error" className={errorTextClass}>{errors.terms}</p>}
           </div>
 
           {/* Submit */}
           <Tip text="Click am, no fear. We no dey bite." align="center">
             <button
               type="submit"
-              disabled={loading}
-              className="w-[28rem] max-w-full rounded-xl bg-accent px-4 py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              disabled={register.isPending}
+              className="w-[28rem] max-w-full rounded-xl bg-accent px-4 py-3.5 text-base font-semibold text-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-screen"
             >
-              {loading ? "Dey create your account..." : "Sign me up"}
+              {register.isPending ? "Dey create your account..." : "Sign me up"}
             </button>
           </Tip>
 
           <p className="pt-2 text-center text-sm text-fg-muted">
             You don dey here before?{" "}
             <Tip text="Ehen! Oga/Madam don return. Go log in." align="right">
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onSwitchToLogin?.();
-                }}
-                className="font-medium text-accent hover:underline"
-              >
+              <Link to="/login" className="font-medium text-accent hover:underline">
                 Abeg sign in na.
-              </a>
+              </Link>
             </Tip>
           </p>
         </form>
