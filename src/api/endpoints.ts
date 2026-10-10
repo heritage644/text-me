@@ -27,6 +27,12 @@ export const endpoints = {
   },
   messages: {
     detail: (messageId: string) => `/messages/${enc(messageId)}`,
+    tags: (messageId: string) => `/messages/${enc(messageId)}/tags`,
+  },
+  tags: {
+    list: "/tags",
+    detail: (tagId: string) => `/tags/${enc(tagId)}`,
+    messages: (tagId: string) => `/tags/${enc(tagId)}/messages`,
   },
   uploads: "/uploads",
 } as const;

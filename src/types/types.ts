@@ -71,6 +71,25 @@ export type Attachment = {
   height: number | null;
 };
 
+/**
+ * Palette key for a tag's colour. The client owns the actual colours
+ * (`src/features/tags/tag-colors.ts`); the server just stores and echoes the key,
+ * so a backend that has never heard of `"teal"` can still round-trip it.
+ */
+export const TAG_COLORS = ["blue", "teal", "green", "yellow", "orange", "red", "pink", "purple"] as const;
+export type TagColor = (typeof TAG_COLORS)[number];
+
+/**
+ * A personal label the current user sticks on messages ("Work", "Invoice", "Read later").
+ * Tags belong to the user, not to the chat: two members can tag the same message differently.
+ */
+export type Tag = {
+  id: ID;
+  label: string;
+  color: TagColor;
+  createdAt: ISODate;
+};
+
 /** `sending` and `failed` are client-only; the server only reports sent/delivered/read. */
 export type MessageStatus = "sending" | "sent" | "delivered" | "read" | "failed";
 
@@ -83,6 +102,8 @@ export type Message = {
   status: MessageStatus;
   createdAt: ISODate;
   editedAt: ISODate | null;
+  /** The current user's tags on this message. Empty for backends that don't implement tagging yet. */
+  tags: Tag[];
   /** Client-generated id for optimistic sends; echoed back by the server for de-duplication. */
   tempId?: string;
 };
@@ -122,6 +143,12 @@ export type MessageListParams = PageParams & {
 
 export type SendMessageRequest = { tempId: string; body: string; attachments?: Attachment[] };
 
+export type CreateTagRequest = { label: string; color: TagColor };
+export type UpdateTagRequest = Partial<CreateTagRequest>;
+/** The full tag set for a message — the server replaces whatever was there. */
+export type SetMessageTagsRequest = { tagIds: ID[] };
+export type TaggedMessageParams = PageParams & { chatId?: ID };
+
 /* ── Realtime payloads (see src/realtime/events.ts) ─────────────────────── */
 
 export type SendMessagePayload = SendMessageRequest & { chatId: ID };
@@ -132,6 +159,9 @@ export type MessageAckPayload = { tempId: string; message: Message };
 export type MessageStatusPayload = { chatId: ID; messageId: ID; status: MessageStatus };
 export type MessageErrorPayload = { tempId: string; error: ApiErrorBody };
 export type PresencePayload = { userId: ID; online: boolean; lastSeenAt: ISODate | null };
+/** Sent to the tag owner's other connections after `PUT /messages/:id/tags`. */
+export type MessageTaggedPayload = { chatId: ID; messageId: ID; tags: Tag[] };
+export type TagDeletedPayload = { tagId: ID };
 
 /* ── Errors ─────────────────────────────────────────────────────────────── */
 

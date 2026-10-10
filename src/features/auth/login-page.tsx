@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { env } from "../../lib/env";
 import { toFormErrors } from "../../lib/form-errors";
 import { AuthLayout } from "./components/auth-layout";
 import { useLogin } from "./hooks";
@@ -130,12 +129,6 @@ export default function Login() {
           We no sabi you, sign up.
         </Link>
       </p>
-
-      {env.useMocks && (
-        <p className="mt-6 rounded-xl border border-divider px-4 py-3 text-center text-xs text-fg-muted">
-          Mock mode: any email and a 6+ character password signs you in. Use <code>wrong-password</code> to see an error.
-        </p>
-      )}
     </AuthLayout>
   );
 }

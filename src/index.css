@@ -45,6 +45,12 @@
   --color-blue-bright: #007aff; /* iOS system blue (light appearance) */
   --color-green: #34c759; /* iOS system green */
   --color-red: #ff3b30; /* iOS system red   */
+  /* Message tag palette — iOS dark-mode system colours, matching the ones above. */
+  --color-teal: #64d2ff; /* iOS system teal    */
+  --color-yellow: #ffd60a; /* iOS system yellow  */
+  --color-orange: #ff9f0a; /* iOS system orange  */
+  --color-pink: #ff375f; /* iOS system pink    */
+  --color-purple: #bf5af2; /* iOS system purple  */
 
   /* ══ 1. Backgrounds & surfaces ═════════════════════════════════════════ */
   --color-screen: var(--color-black); /* Main screen background — true OLED black */

@@ -32,6 +32,11 @@ export const colors = {
   blueBright: '#007aff', // iOS system blue (light appearance)
   green: '#34c759', // iOS system green
   red: '#ff3b30', // iOS system red
+  teal: '#64d2ff', // iOS system teal — message tag palette
+  yellow: '#ffd60a', // iOS system yellow — message tag palette
+  orange: '#ff9f0a', // iOS system orange — message tag palette
+  pink: '#ff375f', // iOS system pink — message tag palette
+  purple: '#bf5af2', // iOS system purple — message tag palette
 
   /* ── 1. Backgrounds & surfaces ───────────────────────────────────────── */
   screen: '#000000', // main screen background — true OLED black

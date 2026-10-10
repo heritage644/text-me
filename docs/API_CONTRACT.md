@@ -1,6 +1,6 @@
 # Text-ME API contract
 
-This is the contract the frontend is built against. Mock mode (`VITE_USE_MOCKS=true`) implements exactly this, so anything that works in mock mode will work against a backend that follows this document.
+This is the contract the frontend is built against — there is no mock layer, so the app talks to a real backend from the first `npm run dev`.
 
 - REST paths are relative to `VITE_API_BASE_URL` (e.g. `http://localhost:3000/api`).
 - The WebSocket endpoint is `VITE_WS_URL` (e.g. `ws://localhost:3000/ws`).
@@ -19,6 +19,10 @@ This is the contract the frontend is built against. Mock mode (`VITE_USE_MOCKS=t
 5. [Endpoints](#5-endpoints)
 6. [WebSocket](#6-websocket)
 7. [Changes from the proposed list](#7-changes-from-the-proposed-list)
+
+> **Optional features.** Everything in [Message tags](#message-tags) is additive: a backend that
+> doesn't implement it yet still works, because a `Message` without a `tags` field is read as
+> `tags: []` and the tagging UI simply shows an empty list.
 
 ---
 
@@ -51,7 +55,7 @@ Recommended refresh cookie: `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`. Us
 Access-Control-Allow-Origin: https://your-frontend.example   (exact origin, not *)
 Access-Control-Allow-Credentials: true
 Access-Control-Allow-Headers: Authorization, Content-Type
-Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS
 ```
 
 ## 2. Errors
@@ -165,6 +169,7 @@ All flags are **per requesting user**.
   status: "sent" | "delivered" | "read";   // aggregate for the sender: read = read by the other member (direct) or by everyone (group)
   createdAt: string;
   editedAt: string | null;
+  tags: Tag[];                  // the *requesting user's* tags; omit or send [] if unimplemented
   tempId?: string;              // echo the client's tempId on the sender's copy (see §6)
 }
 ```
@@ -184,6 +189,26 @@ The client also uses `"sending"` and `"failed"` locally. The server never sends 
   height: number | null;
 }
 ```
+
+### Tag
+
+A tag is a personal label ("Work", "Invoice", "Read later") that a user sticks on messages.
+
+```ts
+{
+  id: string;
+  label: string;         // 1–32 chars, unique per user (case-insensitive)
+  color: string;         // palette key, stored and echoed verbatim — see below
+  createdAt: string;
+}
+```
+
+`color` is one of `blue`, `teal`, `green`, `yellow`, `orange`, `red`, `pink`, `purple`. The client
+owns the actual colour values, so the backend only has to store the string and send it back;
+anything else (or nothing) is rendered as `blue`.
+
+Tags belong to the **user**, not to the chat: two members of a group chat can tag the same
+message differently, and neither sees the other's tags.
 
 ## 5. Endpoints
 
@@ -404,6 +429,60 @@ This is the REST fallback when the socket isn't connected. Also broadcast `messa
 
 - **204**. Sender only. *The UI doesn't expose deleting yet; the API function exists.*
 
+### Message tags
+
+All of these act on the **current user's** tags. They are optional: the UI degrades to an empty
+tag list if a backend doesn't implement them yet.
+
+#### `GET /tags` 🔒
+
+- → `Tag[]` (or `Page<Tag>`), oldest first. Only the current user's tags.
+
+#### `POST /tags` 🔒
+
+```json
+{ "label": "Invoice", "color": "orange" }
+```
+
+- → **201** `Tag`.
+- **409** `TAG_EXISTS` → `fields.label` ("You already have a tag with that name"). Labels are unique per user, case-insensitively.
+- **422** → `fields.label` (empty or longer than 32 chars), `fields.color`.
+
+#### `PATCH /tags/:id` 🔒
+
+```json
+{ "label": "Invoices", "color": "red" }
+```
+
+- Every field is optional → the updated `Tag`. Renaming recolours every message that carries it, because messages embed the whole tag.
+- **404** if the tag isn't the user's. **409** → `fields.label`.
+- Emit `tag:updated` to the user's other connections.
+
+#### `DELETE /tags/:id` 🔒
+
+- **204**. Removes the tag and detaches it from every message that carries it.
+- Emit `tag:deleted` `{ "tagId": "…" }` to the user's other connections.
+
+#### `PUT /messages/:id/tags` 🔒
+
+```json
+{ "tagIds": ["tag_1", "tag_3"] }
+```
+
+- The body is the **complete** set for that message: any tag of this user that isn't listed is removed. An empty array clears the tags.
+- → the updated `Message` (with its `tags`).
+- **404** if the message doesn't exist, or the user isn't a member of its chat.
+- **422** if a `tagId` isn't one of the user's tags.
+- Any member of the chat may tag any message in it; only their own tag list changes, and other members are not notified.
+- Emit `message:tagged` to the **tagging user's other connections only**.
+
+#### `GET /tags/:id/messages?chatId=&cursor=&limit=` 🔒 *(added)*
+
+- → `Page<Message>`, newest first, `nextCursor` pointing at older results — same shape as `GET /chats/:id/messages`.
+- `chatId` scopes the search to one thread (the in-thread tag filter). Without it, the search spans every chat the user belongs to.
+- Only messages the current user tagged with this tag.
+- **404** if the tag isn't the user's.
+
 ### Uploads
 
 #### `POST /uploads` 🔒
@@ -472,6 +551,9 @@ The client sends `typing:start` at most once per typing burst and `typing:stop` 
 | `message:new` | `Message` | Appends to the thread and updates the chat row. Increments unread unless the chat is open and visible. Increments mentions if the body contains `@<username>` |
 | `message:ack` | `{ tempId, message: Message }` | Replaces the optimistic message (matched by `tempId`) with the server's copy |
 | `message:error` *(added)* | `{ tempId, error: { code, message } }` | Marks the optimistic message as failed and shows Retry |
+| `message:tagged` *(added)* | `{ chatId, messageId, tags: Tag[] }` | Replaces that message's tags in the cache. Send it to the tagging user's **other connections** after `PUT /messages/:id/tags` |
+| `tag:updated` *(added)* | `Tag` | Upserts the tag and updates every cached message carrying it |
+| `tag:deleted` *(added)* | `{ tagId }` | Drops the tag from the list and strips it from every cached message |
 | `message:status` | `{ chatId, messageId, status }` | Updates the ticks. *(`chatId` added, so the client can find the message without scanning every chat)* |
 | `typing` | `{ chatId, userId, isTyping }` | Shows or hides the typing indicator. The client also auto-clears it after 6 s |
 | `presence` | `{ userId, online, lastSeenAt }` | Updates online dots and "last seen". Send it to users who share a chat |
@@ -507,6 +589,7 @@ The client sends `typing:start` at most once per typing burst and `typing:stop` 
 **New fields and behaviours:**
 
 - `Chat.blocked`, `Chat.mentionCount` (red badge) and `Chat.archived`.
+- `Message.tags` and the whole [Message tags](#message-tags) surface.
 - `GET /chats` puts pinned chats first and leaves out archived ones.
 - An empty `GET /users?search=` returns contacts or suggestions.
 
@@ -516,3 +599,4 @@ The client sends `typing:start` at most once per typing burst and `typing:stop` 
 - The `auth`, `auth:ok`, `auth:error`, `ping` and `pong` control frames.
 - The `message:error` event.
 - `chatId` in the `message:status` payload.
+- The `message:tagged`, `tag:updated` and `tag:deleted` events.

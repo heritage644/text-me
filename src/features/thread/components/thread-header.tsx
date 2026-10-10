@@ -5,7 +5,7 @@ import { focusRing } from "../../../components/ui/styles";
 import { cn } from "../../../lib/cn";
 import { formatLastSeen } from "../../../lib/format";
 import { usePresence, useRealtimeStore, useTypingUsers } from "../../../realtime/presence-store";
-import type { Chat } from "../../../types/types";
+import type { Chat, Tag } from "../../../types/types";
 import { chatAvatar, chatPeer, chatTitle, firstName, memberName } from "../../chats/utils";
 
 function useSubtitle(chat: Chat, meId: string) {
@@ -30,7 +30,15 @@ function useSubtitle(chat: Chat, meId: string) {
   return { text: `${chat.members.length} members${online ? `, ${online} online` : ""}`, highlight: false };
 }
 
-export function ThreadHeader({ chat, meId }: { chat: Chat; meId: string }) {
+type ThreadHeaderProps = {
+  chat: Chat;
+  meId: string;
+  /** The tag the thread is filtered by, or `null` when everything is shown. */
+  activeTag: Tag | null;
+  onOpenTagFilter: () => void;
+};
+
+export function ThreadHeader({ chat, meId, activeTag, onOpenTagFilter }: ThreadHeaderProps) {
   const infoOpen = Boolean(useMatch("/chats/:chatId/info"));
   const title = chatTitle(chat, meId);
   const peer = chatPeer(chat, meId);
@@ -57,6 +65,19 @@ export function ThreadHeader({ chat, meId }: { chat: Chat; meId: string }) {
             </span>
           </span>
         </Link>
+        <button
+          type="button"
+          onClick={onOpenTagFilter}
+          aria-label={activeTag ? `Filtering by ${activeTag.label}. Change the tag filter` : "Filter messages by tag"}
+          title={activeTag ? `Filtering by ${activeTag.label}` : "Filter messages by tag"}
+          className={cn(
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-search-bar",
+            activeTag ? "text-icon-active" : "text-accent",
+            focusRing,
+          )}
+        >
+          <Icon name={activeTag ? "filter" : "tag"} className="h-6 w-6" />
+        </button>
         <Link
           to={infoHref}
           aria-label={infoOpen ? "Hide chat info" : "Show chat info"}
