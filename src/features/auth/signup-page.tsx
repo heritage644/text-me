@@ -158,7 +158,7 @@ export default function SignUp() {
               autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Amaka Obi"
+              placeholder="Your full name"
               aria-invalid={!!errors.name}
               aria-describedby={described("name")}
               className={`${inputBase} mt-2 ${fieldBorder(errors.name)}`}
