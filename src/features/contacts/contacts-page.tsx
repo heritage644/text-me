@@ -43,21 +43,22 @@ export default function ContactsPage() {
           <span className="flex flex-1 self-stretch items-center border-b border-divider pr-4 font-medium">New group</span>
         </button>
 
-        <h2 className="flex items-center gap-2 px-4 pb-1 pt-5 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-          {debounced ? "Search results" : "People"}
-          {isFetching && !isFetchingNextPage && status === "success" && <Spinner className="h-3 w-3" />}
-        </h2>
+        {/* Nothing is fetched until there is a query, so an empty box shows a prompt, not a list. */}
+        {debounced && (
+          <h2 className="flex items-center gap-2 px-4 pb-1 pt-5 text-xs font-semibold uppercase tracking-wide text-fg-muted">
+            Search results
+            {isFetching && !isFetchingNextPage && status === "success" && <Spinner className="h-3 w-3" />}
+          </h2>
+        )}
 
-        {status === "pending" ? (
+        {!debounced ? (
+          <EmptyState icon="search" title="Type to search" description="Search for people by name or username to start chatting." />
+        ) : status === "pending" ? (
           <UserListSkeleton />
         ) : status === "error" ? (
           <ErrorState message={errorMessage(error)} onRetry={() => void refetch()} />
         ) : users.length === 0 ? (
-          <EmptyState
-            icon="contacts"
-            title={debounced ? "No one found" : "No contacts yet"}
-            description={debounced ? `Nobody matches “${debounced}”. Try their username.` : "Search for people by name or username to start chatting."}
-          />
+          <EmptyState icon="search" title="No one found" description={`Nobody matches “${debounced}”. Try their username.`} />
         ) : (
           <ul aria-label="People" aria-busy={isFetching}>
             {users.map((user) => (

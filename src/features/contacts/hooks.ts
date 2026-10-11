@@ -4,7 +4,13 @@ import { useNavigate } from "react-router-dom";
 import * as usersApi from "../../api/users.api";
 import { useCreateChat } from "../chats/hooks";
 
-/** Empty search returns the user's contacts; otherwise a server-side search. */
+/**
+ * Server-side people search.
+ *
+ * Nothing is fetched until there is an actual query: an empty box must never
+ * surface a server-supplied "suggested people" list. Callers show their
+ * "Type to search" state while `search` is empty.
+ */
 export function useUserSearch(search: string) {
   const query = useInfiniteQuery({
     queryKey: ["users", search],
@@ -12,6 +18,7 @@ export function useUserSearch(search: string) {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
     placeholderData: (previous) => previous,
+    enabled: search.trim().length > 0,
   });
   const users = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data]);
   return { ...query, users };

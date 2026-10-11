@@ -76,6 +76,14 @@ function buildRows(messages: Message[], chat: Chat, meId: string, reachedStart: 
   return rows;
 }
 
+/**
+ * The line at the top of a thread — and, on its own, the whole of an empty one.
+ * A brand-new conversation has nothing else to show, and nothing is invented here.
+ */
+function ThreadStartNotice() {
+  return <p className="px-6 pb-2 pt-4 text-center text-xs text-fg-muted">This is the beginning of your conversation.</p>;
+}
+
 function ThreadSkeleton() {
   return (
     <div aria-hidden="true" className="flex flex-1 flex-col justify-end gap-2 px-4 py-4">
@@ -218,7 +226,7 @@ export function MessageList({ chat, meId, tagFilter, onTagFilter }: MessageListP
 
   const renderRow = (row: Row) => {
     if (row.kind === "start") {
-      return <p className="px-6 pb-2 pt-4 text-center text-xs text-fg-muted">This is the beginning of your conversation.</p>;
+      return <ThreadStartNotice />;
     }
     if (row.kind === "day") {
       return (
@@ -272,7 +280,7 @@ export function MessageList({ chat, meId, tagFilter, onTagFilter }: MessageListP
               }
             />
           ) : (
-            <EmptyState title="No messages yet" description={`Say hello to ${chatTitle(chat, meId)}.`} />
+            <ThreadStartNotice />
           )
         ) : virtual ? (
           <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>

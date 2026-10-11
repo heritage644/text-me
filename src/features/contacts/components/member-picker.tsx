@@ -57,12 +57,15 @@ export function MemberPicker({ selected, onChange, excludeIds = [] }: MemberPick
       </div>
 
       <div className="mt-3">
-        {status === "pending" ? (
+        {/* Same rule as the Contacts screen: no query, no request, no list. */}
+        {!debounced ? (
+          <EmptyState icon="search" title="Type to search" description="Search for people by name or username." />
+        ) : status === "pending" ? (
           <UserListSkeleton rows={6} />
         ) : status === "error" ? (
           <ErrorState message={errorMessage(error)} onRetry={() => void refetch()} />
         ) : candidates.length === 0 ? (
-          <EmptyState icon="search" title="No one found" description={debounced ? `Nobody matches “${debounced}”.` : "No contacts yet."} />
+          <EmptyState icon="search" title="No one found" description={`Nobody matches “${debounced}”.`} />
         ) : (
           <ul aria-label="People">
             {candidates.map((u) => (

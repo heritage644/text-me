@@ -105,9 +105,10 @@ export default function ChatsPage() {
             <EmptyState icon="search" title="No matches" description="No chats match your search or filter." />
           ) : (
             <EmptyState
-              title="No chats yet"
+              icon="chats"
+              title="No conversations yet"
               description="Start a conversation with someone from your contacts."
-              action={<Button onClick={() => navigate("/contacts")}>Start a chat</Button>}
+              action={<Button onClick={() => navigate("/contacts")}>New chat</Button>}
             />
           )
         ) : (
