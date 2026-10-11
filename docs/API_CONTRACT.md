@@ -304,7 +304,7 @@ Every field is optional, and `notifications` is merged with the stored settings:
 - → `Page<User>`.
 - Matches `name` or `username` (prefix or contains, case-insensitive).
 - Excludes the current user.
-- With an **empty `search`**, returns the user's contacts or suggested people, so the Contacts screen isn't empty.
+- The client **never sends an empty `search`**. Contacts and the member picker wait for the user to type and show a "Type to search" state until then, so no server-supplied "suggested people" list is needed. If you do receive an empty `search`, return an empty page — it won't be rendered.
 
 #### `POST /users/:id/block` 🔒
 
@@ -591,7 +591,7 @@ The client sends `typing:start` at most once per typing burst and `typing:stop` 
 - `Chat.blocked`, `Chat.mentionCount` (red badge) and `Chat.archived`.
 - `Message.tags` and the whole [Message tags](#message-tags) surface.
 - `GET /chats` puts pinned chats first and leaves out archived ones.
-- An empty `GET /users?search=` returns contacts or suggestions.
+- `GET /users?search=` is only called with a non-empty `search`; before the user types, the UI shows a "Type to search" state instead of requesting anything.
 
 **WebSocket additions:**
 
