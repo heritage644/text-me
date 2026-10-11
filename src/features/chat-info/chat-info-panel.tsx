@@ -79,14 +79,15 @@ function MediaGrid({ chatId }: { chatId: string }) {
 
 function MemberRow({ member, isMe }: { member: ChatMember; isMe: boolean }) {
   const presence = usePresence(member);
+  const subtitle = isMe ? `@${member.username}` : formatLastSeen(presence.online, presence.lastSeenAt);
   return (
     <li className="flex min-h-14 items-center gap-3 px-4 py-2 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-divider">
       <Avatar name={member.name} src={member.avatarUrl} size={36} online={presence.online && !isMe} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{isMe ? "You" : member.name}</p>
-        <p className={cn("truncate text-sm", presence.online && !isMe ? "text-accent" : "text-fg-muted")}>
-          {isMe ? `@${member.username}` : formatLastSeen(presence.online, presence.lastSeenAt)}
-        </p>
+        {subtitle && (
+          <p className={cn("truncate text-sm", presence.online && !isMe ? "text-accent" : "text-fg-muted")}>{subtitle}</p>
+        )}
       </div>
       {member.role === "admin" && <span className="rounded-full bg-pill px-2 py-0.5 text-xs text-fg-faint">admin</span>}
     </li>
@@ -125,6 +126,8 @@ function ChatIdentity({ chat, meId }: { chat: Chat; meId: string }) {
   const peer = chatPeer(chat, meId);
   const presence = usePresence(peer);
   const title = chatTitle(chat, meId);
+  // "" when the backend has reported no presence — then the line is omitted entirely.
+  const presenceLine = chat.blocked ? "Blocked" : formatLastSeen(presence.online, presence.lastSeenAt);
   return (
     <div className="flex flex-col items-center pt-6 text-center">
       <Avatar name={title} src={chatAvatar(chat, meId)} size={96} />
@@ -132,9 +135,9 @@ function ChatIdentity({ chat, meId }: { chat: Chat; meId: string }) {
       {peer ? (
         <>
           <p className="text-fg-muted">@{peer.username}</p>
-          <p className={cn("mt-1 text-sm", presence.online && !chat.blocked ? "text-accent" : "text-fg-muted")}>
-            {chat.blocked ? "Blocked" : formatLastSeen(presence.online, presence.lastSeenAt)}
-          </p>
+          {presenceLine && (
+            <p className={cn("mt-1 text-sm", presence.online && !chat.blocked ? "text-accent" : "text-fg-muted")}>{presenceLine}</p>
+          )}
           {peer.status && <p className="mt-3 max-w-xs text-sm text-fg">“{peer.status}”</p>}
         </>
       ) : (

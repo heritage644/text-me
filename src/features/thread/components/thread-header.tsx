@@ -24,6 +24,7 @@ function useSubtitle(chat: Chat, meId: string) {
     return { text, highlight: true };
   }
   if (chat.type === "direct") {
+    // `text` is "" when presence is unknown; ThreadHeader then renders no subtitle.
     return { text: chat.blocked ? "blocked" : formatLastSeen(presence.online, presence.lastSeenAt), highlight: presence.online && !chat.blocked };
   }
   const online = chat.members.filter((m) => m.id !== meId && (livePresence[m.id]?.online ?? m.online)).length;
@@ -60,9 +61,12 @@ export function ThreadHeader({ chat, meId, activeTag, onOpenTagFilter }: ThreadH
           <Avatar name={title} src={chatAvatar(chat, meId)} size={40} online={presence.online && chat.type === "direct" && !chat.blocked} />
           <span className="min-w-0 leading-tight">
             <span className="block truncate font-semibold">{title}</span>
-            <span aria-live="polite" className={cn("block truncate text-sm", subtitle.highlight ? "text-accent" : "text-fg-muted")}>
-              {subtitle.text}
-            </span>
+            {/* Empty for a direct chat with no reported presence: show nothing, not a guess. */}
+            {subtitle.text && (
+              <span aria-live="polite" className={cn("block truncate text-sm", subtitle.highlight ? "text-accent" : "text-fg-muted")}>
+                {subtitle.text}
+              </span>
+            )}
           </span>
         </Link>
         <button
