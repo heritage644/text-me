@@ -5,6 +5,7 @@ import { focusRing } from "../../../components/ui/styles";
 import { cn } from "../../../lib/cn";
 import { formatBytes, formatTime } from "../../../lib/format";
 import type { Attachment, Message, MessageStatus } from "../../../types/types";
+import { TagChip } from "../../tags/components/tag-chip";
 
 const IMAGE_MAX_W = 280;
 const IMAGE_MAX_H = 320;
@@ -82,7 +83,34 @@ export type BubbleProps = {
   groupStart: boolean;
   groupEnd: boolean;
   onRetry: (message: Message) => void;
+  /** Opens the tag picker for this message. */
+  onTag: (message: Message) => void;
+  /** Narrows the thread to one tag (tapping a chip). */
+  onTagFilter: (tagId: string) => void;
 };
+
+/**
+ * Per-message tag button. Hidden until the row is hovered or focused on `md` and
+ * up (where a pointer is available); always visible, but muted, on touch.
+ */
+function TagAction({ hasTags, onClick }: { hasTags: boolean; onClick: () => void }) {
+  const label = hasTags ? "Edit tags" : "Add a tag";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "mb-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-fg-muted transition-opacity duration-150",
+        "hover:bg-search-bar hover:text-accent md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
+        focusRing,
+      )}
+    >
+      <Icon name="tag" className="h-4 w-4" />
+    </button>
+  );
+}
 
 export const MessageBubble = memo(function MessageBubble({
   message,
@@ -94,8 +122,13 @@ export const MessageBubble = memo(function MessageBubble({
   groupStart,
   groupEnd,
   onRetry,
+  onTag,
+  onTagFilter,
 }: BubbleProps) {
   const hasBody = message.body.trim().length > 0;
+  // Tagging needs a server-side message id, so it is only offered once the
+  // message has been acknowledged (no optimistic or failed sends).
+  const taggable = message.status !== "sending" && message.status !== "failed";
   const onlyMedia = !hasBody && message.attachments.length > 0;
   const time = formatTime(message.createdAt);
   const meta = (
@@ -107,10 +140,17 @@ export const MessageBubble = memo(function MessageBubble({
   );
 
   return (
-    <div className={cn("flex items-end gap-2 px-3 md:px-4", isOwn ? "justify-end" : "justify-start", groupStart ? "pt-2" : "pt-0.5")}>
+    <div
+      className={cn(
+        "group flex items-end gap-1.5 px-2.5 md:px-4",
+        isOwn ? "justify-end" : "justify-start",
+        groupStart ? "pt-2" : "pt-0.5",
+      )}
+    >
       {avatarGutter && (
         <span className="w-7 shrink-0">{avatarName && <Avatar name={avatarName} src={avatarSrc} size={28} />}</span>
       )}
+      {isOwn && taggable && <TagAction hasTags={message.tags.length > 0} onClick={() => onTag(message)} />}
       <div className={cn("flex max-w-[80%] flex-col md:max-w-[65%]", isOwn ? "items-end" : "items-start")}>
         <div
           className={cn(
@@ -152,7 +192,15 @@ export const MessageBubble = memo(function MessageBubble({
             Not delivered. Tap to retry
           </button>
         )}
+        {message.tags.length > 0 && (
+          <div className={cn("mt-1 flex max-w-full flex-wrap gap-1", isOwn ? "justify-end" : "justify-start")}>
+            {message.tags.map((tag) => (
+              <TagChip key={tag.id} tag={tag} onClick={() => onTagFilter(tag.id)} />
+            ))}
+          </div>
+        )}
       </div>
+      {!isOwn && taggable && <TagAction hasTags={message.tags.length > 0} onClick={() => onTag(message)} />}
     </div>
   );
 });

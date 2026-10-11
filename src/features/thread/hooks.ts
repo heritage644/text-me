@@ -8,6 +8,7 @@ import { socket } from "../../realtime/socket";
 import type { Attachment, Message } from "../../types/types";
 import { useCurrentUser } from "../auth/session-store";
 import { applyMessageToChat, clearUnread } from "../chats/cache";
+import { useTaggedMessages } from "../tags/hooks";
 import { messageKeys, setMessageStatus, upsertMessage } from "./cache";
 import { trackPending } from "./send-tracker";
 
@@ -25,6 +26,17 @@ export function useMessages(chatId: string) {
   });
   const messages = useMemo(() => (query.data ? query.data.pages.flatMap((p) => p.items).reverse() : []), [query.data]);
   return { ...query, messages };
+}
+
+/**
+ * The messages to render: the whole thread, or only the ones carrying `tagId`
+ * (`GET /tags/:id/messages?chatId=`). Both queries are cursor-paginated and
+ * newest first, so the list component can treat them identically.
+ */
+export function useThreadMessages(chatId: string, tagId: string | null) {
+  const all = useMessages(chatId);
+  const tagged = useTaggedMessages(tagId, chatId);
+  return tagId ? tagged : all;
 }
 
 type SendInput = { body: string; attachments?: Attachment[]; retryOf?: Message };
@@ -51,6 +63,9 @@ export function useSendMessage(chatId: string) {
         status: "sending",
         createdAt: retryOf?.createdAt ?? new Date().toISOString(),
         editedAt: null,
+        // Messages start untagged: tagging needs a server id, so the UI only
+        // offers it once the message has been acknowledged.
+        tags: [],
       };
       upsertMessage(qc, optimistic);
       applyMessageToChat(qc, optimistic);

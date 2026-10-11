@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { errorMessage, isApiError } from "../../api/errors";
 import { Button } from "../../components/ui/button";
 import { EmptyState, ErrorState } from "../../components/ui/empty-state";
@@ -10,6 +10,9 @@ import { useCurrentUser } from "../auth/session-store";
 import { useChat } from "../chats/hooks";
 import { chatPeer, chatTitle } from "../chats/utils";
 import { useUnblockUser } from "../chat-info/hooks";
+import { TagFilterBar } from "../tags/components/tag-filter-bar";
+import { TagFilterModal } from "../tags/components/tag-filter-modal";
+import { useTags } from "../tags/hooks";
 import { Composer } from "./components/composer";
 import { MessageList } from "./components/message-list";
 import { ThreadHeader } from "./components/thread-header";
@@ -30,6 +33,19 @@ export default function ThreadPane({ chatId, className }: { chatId: string; clas
   const me = useCurrentUser();
   const { data: chat, status, error, refetch } = useChat(chatId);
   const setActiveChat = useRealtimeStore((s) => s.setActiveChat);
+
+  /*
+   * The tag filter lives in the URL (`?tag=<id>`), so a filtered view can be
+   * linked to, shared between panes, and survives a reload or a back navigation.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: tags } = useTags();
+  const [filterOpen, setFilterOpen] = useState(false);
+  const activeTag = tags?.find((t) => t.id === searchParams.get("tag")) ?? null;
+  const setTagFilter = useCallback(
+    (tagId: string | null) => setSearchParams(tagId ? { tag: tagId } : {}, { replace: true }),
+    [setSearchParams],
+  );
 
   // Lets realtime handlers know not to count messages in the open chat as unread.
   useEffect(() => {
@@ -77,9 +93,17 @@ export default function ThreadPane({ chatId, className }: { chatId: string; clas
   const peer = chatPeer(chat, me.id);
   return (
     <section aria-label={`Conversation with ${chatTitle(chat, me.id)}`} className={frame}>
-      <ThreadHeader chat={chat} meId={me.id} />
-      <MessageList chat={chat} meId={me.id} />
+      <ThreadHeader chat={chat} meId={me.id} activeTag={activeTag} onOpenTagFilter={() => setFilterOpen(true)} />
+      {activeTag && <TagFilterBar tag={activeTag} onClear={() => setTagFilter(null)} />}
+      {/* Remount on filter change: the list scrolls to the bottom of the new result set. */}
+      <MessageList key={activeTag?.id ?? "all"} chat={chat} meId={me.id} tagFilter={activeTag} onTagFilter={setTagFilter} />
       {chat.blocked && peer ? <BlockedBar userId={peer.id} name={peer.name} /> : <Composer chatId={chat.id} />}
+      <TagFilterModal
+        open={filterOpen}
+        activeTagId={activeTag?.id ?? null}
+        onSelect={setTagFilter}
+        onClose={() => setFilterOpen(false)}
+      />
     </section>
   );
 }

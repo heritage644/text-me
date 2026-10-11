@@ -12,7 +12,6 @@ import { endpoints } from "./endpoints";
 import { ApiError, errorFromResponse } from "./errors";
 import { toAccessToken } from "./normalize";
 
-type Transport = (url: string, init: RequestInit) => Promise<Response>;
 type QueryValue = string | number | boolean | null | undefined;
 
 export type RequestOptions = {
@@ -27,13 +26,6 @@ export type RequestOptions = {
 };
 
 const DEFAULT_TIMEOUT_MS = 15_000;
-
-let transport: Transport = (url, init) => fetch(url, init);
-
-/** Swap the network layer (used by mock mode). Components never notice. */
-export function setTransport(next: Transport) {
-  transport = next;
-}
 
 /* ── Access token (memory only) ─────────────────────────────────────────── */
 
@@ -89,7 +81,7 @@ async function send(path: string, opts: RequestOptions, token: string | null): P
   if (token) headers.Authorization = `Bearer ${token}`;
 
   try {
-    return await transport(buildUrl(path, opts.query), {
+    return await fetch(buildUrl(path, opts.query), {
       method: opts.method ?? "GET",
       headers,
       body,
@@ -166,6 +158,9 @@ export const http = {
     request<T>(path, { ...opts, method: "POST", body }),
   patch: <T = unknown>(path: string, body?: unknown, opts?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...opts, method: "PATCH", body }),
+  /** Replace a whole sub-resource (e.g. a message's tag set). */
+  put: <T = unknown>(path: string, body?: unknown, opts?: Omit<RequestOptions, "method" | "body">) =>
+    request<T>(path, { ...opts, method: "PUT", body }),
   delete: <T = unknown>(path: string, opts?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...opts, method: "DELETE" }),
 };

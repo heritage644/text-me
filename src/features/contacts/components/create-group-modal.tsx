@@ -88,7 +88,7 @@ export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: ()
             label="Group name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Weekend Football"
+            placeholder="Group name"
             maxLength={64}
             error={errors.name}
             autoFocus

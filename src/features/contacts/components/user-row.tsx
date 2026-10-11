@@ -18,6 +18,9 @@ type UserRowProps = {
 
 export const UserRow = memo(function UserRow({ user, onSelect, trailing, selected, role, disabled }: UserRowProps) {
   const presence = usePresence(user);
+  const lastSeen = formatLastSeen(presence.online, presence.lastSeenAt);
+  const subtitle =
+    user.status && !presence.online ? user.status : lastSeen ? `@${user.username} · ${lastSeen}` : `@${user.username}`;
   return (
     <li>
       <button
@@ -32,9 +35,7 @@ export const UserRow = memo(function UserRow({ user, onSelect, trailing, selecte
         <span className="flex min-w-0 flex-1 items-center gap-3 self-stretch border-b border-divider py-2 pr-4">
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium text-fg">{user.name}</span>
-            <span className={cn("block truncate text-sm", presence.online ? "text-accent" : "text-fg-muted")}>
-              {user.status && !presence.online ? user.status : `@${user.username} · ${formatLastSeen(presence.online, presence.lastSeenAt)}`}
-            </span>
+            <span className={cn("block truncate text-sm", presence.online ? "text-accent" : "text-fg-muted")}>{subtitle}</span>
           </span>
           {trailing}
         </span>

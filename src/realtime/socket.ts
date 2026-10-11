@@ -3,8 +3,8 @@
  * an event emitter, and a re-sync signal after reconnecting.
  *
  * Wire format (native WebSocket): JSON text frames `{ "event": string, "data"?: any }`.
- * The transport is pluggable — implement `SocketTransport` to use Socket.IO
- * (map `emit/onAny` onto `send/onFrame`) or the mock server.
+ * The transport is an interface — implement `SocketTransport` and change
+ * `createTransport` below to use Socket.IO (map `emit/onAny` onto `send/onFrame`).
  */
 import { ControlEvent, LocalEvent, type ClientEventMap, type ClientEventName, type ServerEventName } from "./events";
 
@@ -51,11 +51,8 @@ export class WebSocketTransport implements SocketTransport {
   }
 }
 
-let createTransport: () => SocketTransport = () => new WebSocketTransport();
-
-export function setSocketTransportFactory(factory: () => SocketTransport) {
-  createTransport = factory;
-}
+/** Swap this for another `SocketTransport` implementation (e.g. Socket.IO). */
+const createTransport: () => SocketTransport = () => new WebSocketTransport();
 
 export type ConnectionState = "idle" | "connecting" | "open" | "reconnecting" | "offline";
 

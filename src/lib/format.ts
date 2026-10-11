@@ -40,9 +40,16 @@ export function formatDayLabel(iso: string) {
   });
 }
 
+/**
+ * Presence line for a user: "online", "last seen today at 09:41", …
+ *
+ * Returns "" when the backend has told us nothing — no live `presence` event and
+ * no `lastSeenAt` on the user. Callers render nothing rather than inventing a
+ * "last seen recently".
+ */
 export function formatLastSeen(online: boolean, lastSeenAt: string | null) {
   if (online) return "online";
-  if (!lastSeenAt) return "last seen recently";
+  if (!lastSeenAt) return "";
   const days = daysAgo(lastSeenAt);
   if (days === 0) return `last seen today at ${formatTime(lastSeenAt)}`;
   if (days === 1) return `last seen yesterday at ${formatTime(lastSeenAt)}`;

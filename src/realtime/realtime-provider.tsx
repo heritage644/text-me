@@ -1,14 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 import { refreshAccessToken, tokens } from "../api/client";
-import { toChat, toMessage } from "../api/normalize";
+import { toChat, toMessage, toTag } from "../api/normalize";
 import { announce } from "../components/ui/announcer";
 import { env } from "../lib/env";
 import { useSession } from "../features/auth/session-store";
 import { applyMessageToChat, findChat, upsertChat } from "../features/chats/cache";
 import { firstName, attachmentLabel } from "../features/chats/utils";
-import { setMessageStatus, upsertMessage } from "../features/thread/cache";
+import { removeTagFromMessages, replaceTagInMessages, setMessageStatus, setMessageTags, upsertMessage } from "../features/thread/cache";
 import { failPending, resolvePending } from "../features/thread/send-tracker";
+import { removeTag, tagKeys, upsertTag } from "../features/tags/cache";
 import type { MessageStatus, PresencePayload, TypingPayload } from "../types/types";
 import { LocalEvent, ServerEvent } from "./events";
 import { useRealtimeStore } from "./presence-store";
@@ -27,7 +28,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    const url = env.useMocks ? "mock://realtime" : env.wsUrl;
+    const url = env.wsUrl;
     if (!url) {
       console.warn("[Text-ME] VITE_WS_URL is not set; realtime updates are disabled.");
       return;
@@ -67,6 +68,23 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   });
 
   useSocketEvent<{ tempId: string }>(ServerEvent.MessageError, ({ tempId }) => failPending(tempId));
+
+  // Another device of the same user tagged (or untagged) a message.
+  useSocketEvent<Raw>(ServerEvent.MessageTagged, ({ chatId, messageId, tags }) => {
+    setMessageTags(qc, { chatId: String(chatId), id: String(messageId) }, (tags ?? []).map(toTag));
+    void qc.invalidateQueries({ queryKey: tagKeys.anyMessages, refetchType: "active" });
+  });
+
+  useSocketEvent<Raw>(ServerEvent.TagUpdated, (raw) => {
+    const tag = toTag(raw);
+    upsertTag(qc, tag);
+    replaceTagInMessages(qc, tag);
+  });
+
+  useSocketEvent<{ tagId: string }>(ServerEvent.TagDeleted, ({ tagId }) => {
+    removeTag(qc, String(tagId));
+    removeTagFromMessages(qc, String(tagId));
+  });
 
   useSocketEvent<TypingPayload>(ServerEvent.Typing, ({ chatId, userId, isTyping }) => {
     if (userId !== useSession.getState().user?.id) useRealtimeStore.getState().setTyping(chatId, userId, isTyping);

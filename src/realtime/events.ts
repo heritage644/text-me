@@ -14,6 +14,12 @@ export const ServerEvent = {
   MessageAck: "message:ack",
   MessageStatus: "message:status",
   MessageError: "message:error",
+  /** The current user's tag set on a message changed (from another device). */
+  MessageTagged: "message:tagged",
+  /** A tag was created, renamed or recoloured. */
+  TagUpdated: "tag:updated",
+  /** A tag was deleted; it disappears from every message that carried it. */
+  TagDeleted: "tag:deleted",
   Typing: "typing",
   Presence: "presence",
   ChatUpdated: "chat:updated",

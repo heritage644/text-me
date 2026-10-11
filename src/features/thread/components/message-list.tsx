@@ -1,7 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { errorMessage } from "../../../api/errors";
 import { Badge } from "../../../components/ui/badge";
+import { Button } from "../../../components/ui/button";
 import { EmptyState, ErrorState } from "../../../components/ui/empty-state";
 import { Icon } from "../../../components/ui/icon";
 import { Skeleton } from "../../../components/ui/skeleton";
@@ -10,16 +12,18 @@ import { focusRing } from "../../../components/ui/styles";
 import { cn } from "../../../lib/cn";
 import { formatDayLabel, isSameDay } from "../../../lib/format";
 import { useTypingUsers } from "../../../realtime/presence-store";
-import type { Chat, Message } from "../../../types/types";
+import type { Chat, Message, Tag } from "../../../types/types";
 import { chatTitle } from "../../chats/utils";
-import { useMarkRead, useMessages, useSendMessage } from "../hooks";
+import { TagPickerModal } from "../../tags/components/tag-picker-modal";
+import { findMessage } from "../cache";
+import { useMarkRead, useSendMessage, useThreadMessages } from "../hooks";
 import { MessageBubble, type BubbleProps } from "./message-bubble";
 import { TypingIndicator } from "./typing-indicator";
 
 type Row =
   | { kind: "start"; key: string }
   | { kind: "day"; key: string; label: string }
-  | { kind: "message"; key: string; props: Omit<BubbleProps, "onRetry"> };
+  | { kind: "message"; key: string; props: Omit<BubbleProps, "onRetry" | "onTag" | "onTagFilter"> };
 
 /** Consecutive messages from the same sender within this window form one visual group. */
 const GROUP_GAP_MS = 5 * 60_000;
@@ -82,11 +86,36 @@ function ThreadSkeleton() {
   );
 }
 
-export function MessageList({ chat, meId }: { chat: Chat; meId: string }) {
-  const { messages, status, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useMessages(chat.id);
+type MessageListProps = {
+  chat: Chat;
+  meId: string;
+  /** When set, only messages carrying this tag are listed. */
+  tagFilter: Tag | null;
+  onTagFilter: (tagId: string | null) => void;
+};
+
+export function MessageList({ chat, meId, tagFilter, onTagFilter }: MessageListProps) {
+  const qc = useQueryClient();
+  const { messages, status, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useThreadMessages(
+    chat.id,
+    tagFilter?.id ?? null,
+  );
   const send = useSendMessage(chat.id);
   const someoneTyping = useTypingUsers(chat.id).some((id) => id !== meId);
-  useMarkRead(chat.id, messages, meId);
+  // A filtered view is a search, not "reading the chat", so it doesn't mark anything read.
+  useMarkRead(chat.id, tagFilter ? [] : messages, meId);
+
+  const [tagging, setTagging] = useState<Message | null>(null);
+  const openTagPicker = useCallback((message: Message) => setTagging(message), []);
+
+  /*
+   * The picker edits the tags of one message, so it needs the *current* copy:
+   * prefer the visible list, then the unfiltered thread cache (a message can
+   * leave a filtered list the moment it loses the tag being shown).
+   */
+  const taggingMessage = tagging
+    ? (messages.find((m) => m.id === tagging.id) ?? findMessage(qc, { chatId: chat.id, id: tagging.id }) ?? tagging)
+    : null;
 
   const rows = useMemo(
     () => buildRows(messages, chat, meId, status === "success" && !hasNextPage),
@@ -198,7 +227,7 @@ export function MessageList({ chat, meId }: { chat: Chat; meId: string }) {
         </div>
       );
     }
-    return <MessageBubble {...row.props} onRetry={retry} />;
+    return <MessageBubble {...row.props} onRetry={retry} onTag={openTagPicker} onTagFilter={onTagFilter} />;
   };
 
   if (status === "pending") return <ThreadSkeleton />;
@@ -231,7 +260,20 @@ export function MessageList({ chat, meId }: { chat: Chat; meId: string }) {
         className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3 [overflow-anchor:none]", focusRing, "focus-visible:ring-inset")}
       >
         {messages.length === 0 ? (
-          <EmptyState title="No messages yet" description={`Say hello to ${chatTitle(chat, meId)}.`} />
+          tagFilter ? (
+            <EmptyState
+              icon="tag"
+              title={`No messages tagged “${tagFilter.label}”`}
+              description="Tag a message to collect it here."
+              action={
+                <Button variant="secondary" onClick={() => onTagFilter(null)}>
+                  Show all messages
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState title="No messages yet" description={`Say hello to ${chatTitle(chat, meId)}.`} />
+          )
         ) : virtual ? (
           <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((item) => (
@@ -271,6 +313,14 @@ export function MessageList({ chat, meId }: { chat: Chat; meId: string }) {
           </span>
         )}
       </button>
+
+      {/* Keyed by message so the form resets for every message the picker is opened on. */}
+      <TagPickerModal
+        key={taggingMessage?.id ?? "closed"}
+        open={!!taggingMessage}
+        message={taggingMessage}
+        onClose={() => setTagging(null)}
+      />
     </div>
   );
 }

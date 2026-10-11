@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import * as messagesApi from "../api/messages.api";
 import { chatKeys } from "../features/chats/cache";
+import { tagKeys } from "../features/tags/cache";
 import { latestConfirmedAt, messageKeys, upsertMessage } from "../features/thread/cache";
 
 const RESYNC_LIMIT = 100;
@@ -12,6 +13,8 @@ const RESYNC_LIMIT = 100;
  */
 export async function resync(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: chatKeys.list });
+  // Tags are cached with `staleTime: Infinity`; a reconnect may have missed tag events.
+  void qc.invalidateQueries({ queryKey: tagKeys.list });
   const threads = qc.getQueryCache().findAll({ queryKey: ["messages"] });
 
   await Promise.all(

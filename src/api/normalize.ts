@@ -14,8 +14,11 @@ import type {
   Message,
   MessageStatus,
   Page,
+  Tag,
+  TagColor,
   User,
 } from "../types/types";
+import { TAG_COLORS } from "../types/types";
 
 // Raw payloads are untrusted input of unknown shape; `any` is confined to this file.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,6 +77,21 @@ export function toAttachment(raw: Raw): Attachment {
   };
 }
 
+/**
+ * Tags carry a palette key, not a colour value: the client decides what "teal"
+ * looks like (`features/tags/tag-colors.ts`), so the server only has to store and
+ * echo the string. Unknown or missing keys fall back to the first palette colour.
+ */
+export function toTag(raw: Raw): Tag {
+  const color = raw?.color ?? raw?.colour;
+  return {
+    id: id(raw),
+    label: raw.label ?? raw.name ?? raw.title ?? "",
+    color: TAG_COLORS.includes(color) ? (color as TagColor) : TAG_COLORS[0],
+    createdAt: date(raw.createdAt) ?? new Date().toISOString(),
+  };
+}
+
 export function toMessage(raw: Raw): Message {
   return {
     id: id(raw),
@@ -84,6 +102,7 @@ export function toMessage(raw: Raw): Message {
     status: MESSAGE_STATUSES.includes(raw.status) ? raw.status : "sent",
     createdAt: date(raw.createdAt) ?? new Date().toISOString(),
     editedAt: date(raw.editedAt),
+    tags: (raw.tags ?? []).map(toTag),
     ...(raw.tempId ? { tempId: String(raw.tempId) } : {}),
   };
 }
